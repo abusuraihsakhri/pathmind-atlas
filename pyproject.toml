@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pathmind-atlas"
+version = "1.0.0"
+description = "Autonomous Distributed Component Surgical Pathology Quality Control, Synoptic Reporting & Cryptographic Audit System"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    { name = "Dr. Abu Suraih Sakhri", email = "abusuraihsakhri@clinical-ai.org" }
+]
+dependencies = [
+    "pydantic>=2.0.0",
+    "sqlalchemy>=2.0.0",
+    "fastapi>=0.111.0",
+    "uvicorn>=0.30.0",
+    "click>=8.1.0",
+    "rich>=13.7.0",
+    "prometheus-client>=0.20.0",
+    "httpx>=0.27.0",
+    "pytest>=8.0.0",
+    "numpy>=1.24.0"
+]
+
+[project.scripts]
+pathmind = "cli:cli"
