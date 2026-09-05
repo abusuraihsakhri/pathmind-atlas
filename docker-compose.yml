@@ -7,8 +7,8 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - AUDIT_SECRET_KEY=pathmind-atlas-prod-audit-key-2026
-      - MODEL_PROVIDER=mock
+      - PATHMIND_HMAC_SECRET=${PATHMIND_HMAC_SECRET:-please-set-a-secure-32-char-min-secret-key}
+      - PATHMIND_LLM_PROVIDER=mock
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]

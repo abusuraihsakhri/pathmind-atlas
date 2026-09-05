@@ -7,6 +7,7 @@ Architect: Dr. Abu Suraih Sakhri (@abusuraihsakhri)
 from __future__ import annotations
 import json
 import logging
+import uuid
 from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, Field
 
@@ -182,7 +183,7 @@ class SlideQCAgent:
         llm_resp = self.llm.generate(prompt=qc_prompt, system_prompt="You are a clinical pathologist assessing digital whole slide image quality.")
         narrative = llm_resp.content
 
-        slide_id = metrics.slide_id or f"SLD-{json.dumps(metrics.model_dump())[:8]}"
+        slide_id = metrics.slide_id or f"SLD-{uuid.uuid4().hex[:8].upper()}"
 
         # Database Persistence
         if persist_to_db:

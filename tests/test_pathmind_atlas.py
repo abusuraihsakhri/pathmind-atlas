@@ -56,6 +56,7 @@ def setup_test_db(tmp_path):
     db_file = tmp_path / "test_pathmind.db"
     db_url = f"sqlite:///{db_file}"
     os.environ["PATHMIND_DATABASE_URL"] = db_url
+    os.environ["PATHMIND_HMAC_SECRET"] = "test-secret-key-for-pytest-min-32-chars-long"
     init_db()
     yield
 
@@ -113,7 +114,7 @@ def test_sanitize_phi_text():
 # 2. Cryptographic HMAC & Audit Trail Tests
 # ---------------------------------------------------------
 def test_hmac_signer():
-    signer = HMACSigner(secret_key="TEST_SECURE_KEY_123")
+    signer = HMACSigner(secret_key="TEST_SECURE_KEY_12345678901234567890")
     payload = {"case_id": "CASE-101", "grade": "PASS"}
     sig1 = signer.sign_payload(payload)
     sig2 = signer.sign_payload(payload)

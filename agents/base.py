@@ -113,7 +113,14 @@ class HMACSigner:
     Cryptographic signer for audit trails and inter-agent communication verification.
     """
     def __init__(self, secret_key: Optional[str] = None):
-        key = secret_key or os.getenv("PATHMIND_HMAC_SECRET", "PATHMIND_ATLAS_SECURE_HMAC_KEY_2026_PROD")
+        key = secret_key or os.getenv("PATHMIND_HMAC_SECRET")
+        if not key:
+            raise SecurityException(
+                "HMAC secret key must be provided via PATHMIND_HMAC_SECRET environment variable "
+                "or secret_key parameter. Refusing to use a hardcoded default in production."
+            )
+        if len(key) < 32:
+            raise SecurityException("HMAC secret key must be at least 32 characters for adequate security.")
         self._secret = key.encode("utf-8")
 
     def sign_payload(self, payload: Union[Dict[str, Any], str, bytes]) -> str:

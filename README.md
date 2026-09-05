@@ -1,6 +1,6 @@
 # Pathmind Atlas
 
-> **Domain:** Clinical Decision Support & Biomedical Computing  
+> **Domain:** Clinical Decision Support & Biomedical Computing
 > **Reference Guidelines & Standards:** `Standard Clinical Formulations & ISO/IEC Quality Frameworks`
 
 <div align="center">
@@ -16,21 +16,43 @@
 
 ---
 
-## 📖 What It Does
+## What It Does
 
-**Pathmind Atlas** is an advanced analytical and computational platform implementing Whole-Slide Imaging Laplacian blur (<300) & fold QC worker, CAP cancer synoptic protocol margin checker (0.0mm panic alert), zero-PHI outbound guard, HMAC audit trail, FastAPI, Web Dashboard & CLI. (24/24 tests passing).
+**Pathmind Atlas** is an advanced analytical and computational platform implementing Whole-Slide Imaging Laplacian blur QC worker, CAP cancer synoptic protocol margin checker (0.0mm panic alert), zero-PHI outbound guard, HMAC audit trail, FastAPI REST API, Web Dashboard & CLI. (39/39 tests passing).
 
 ---
 
-## ⚙️ Key Capabilities & Algorithmic Modules
+## Key Capabilities & Algorithmic Modules
 
 - **Deterministic Calculation Engine**: Strict compliance with standard reference formulations and thresholds.
 - **Risk & Urgency Classification**: Multi-tier categorization with automated clinical/operational action recommendations.
 - **Validation & Guardrails**: Rigorous input bounds checking and anomaly detection.
+- **Cryptographic Audit Trail**: Tamper-evident HMAC-SHA256 chained audit logs.
+- **Zero-PHI Outbound Guard**: Active regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
 
 ---
 
-## 💻 CLI Quickstart & Usage
+## Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/abusuraihsakhri/pathmind-atlas.git
+cd pathmind-atlas
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -e .
+
+# Set required environment variable for HMAC audit security
+export PATHMIND_HMAC_SECRET="your-secure-32-character-minimum-secret-key"
+```
+
+---
+
+## CLI Quickstart & Usage
 
 ### 1. Guided Interactive Mode
 ```bash
@@ -42,58 +64,149 @@ python cli.py
 python cli.py --accession <value> --organ <value> --specimen <value> --history <value>
 ```
 
-### Parameter Reference
-- `--accession`: Specifies input measurement or parameter value.
-- `--organ`: Specifies input measurement or parameter value.
-- `--specimen`: Specifies input measurement or parameter value.
-- `--history`: Specifies input measurement or parameter value.
-- `--case-id`: Specifies input measurement or parameter value.
-- `--blur-var`: Specifies input measurement or parameter value.
-- `--tissue-fold`: Specifies input measurement or parameter value.
-- `--pen-mark`: Specifies input measurement or parameter value.
-- `--air-bubble`: Specifies input measurement or parameter value.
-- `--stain`: Specifies input measurement or parameter value.
+### 3. Initialize Database
+```bash
+python cli.py init
+```
 
-### Input Data Schema
+### 4. Create a Case
+```bash
+python cli.py create_case --accession S26-1002 --organ BREAST --specimen "Total Mastectomy" --history "Invasive ductal carcinoma"
+```
 
-| Field | Description | Requirement |
-|:------|:------------|:------------|
-| `suite_name` | Parameter / observation metric | Required |
-| `system_slug` | Parameter / observation metric | Required |
-| `standard_reference` | Parameter / observation metric | Required |
-| `test_cases` | Parameter / observation metric | Required |
+### 5. Run Slide QC
+```bash
+python cli.py qc_slide --case-id CASE-XXX --blur-var 1200.0 --tissue-fold 0.5 --air-bubble 0.0
+```
+
+### 6. Validate Synoptic Report
+```bash
+python cli.py validate_synoptic --case-id CASE-XXX --protocol BREAST_INVASIVE --histology "Invasive Ductal Carcinoma" --size 2.4 --deep-margin 3.5 --radial-margin 1.2
+```
+
+### 7. Review Case (Supervisor Orchestration)
+```bash
+python cli.py review_case --case-id CASE-XXX
+```
+
+### 8. Verify Audit Integrity
+```bash
+python cli.py audit_verify
+```
+
+### 9. Launch API Server
+```bash
+python cli.py serve --host 127.0.0.1 --port 8000
+```
 
 ---
 
-## 🛡️ Security & Enterprise Architecture
+## REST API Endpoints
 
-* **Zero-PHI Outbound Interceptor:** Active AST and regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | System health check |
+| GET | `/metrics` | Prometheus operational metrics |
+| POST | `/api/cases` | Create new pathology case |
+| GET | `/api/cases` | List all cases |
+| GET | `/api/cases/{case_id}` | Get case details |
+| POST | `/api/slides/qc` | Submit slide for QC evaluation |
+| POST | `/api/synoptic/validate` | Validate synoptic cancer report |
+| POST | `/api/cases/{case_id}/review` | Orchestrate full case review |
+| GET | `/api/audit` | Get cryptographic audit trail |
+| GET | `/api/audit/verify` | Verify audit chain integrity |
+| POST | `/api/chat` | Operations chat assistant |
+
+---
+
+## Security & Enterprise Architecture
+
+* **Zero-PHI Outbound Interceptor:** Active regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
 * **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
-* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances (`llama3`, `mistral`), Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
-* **Active Learning Bayesian Calibration:** Dynamic tracker updating worker reliability weights and monitoring Brier calibration drift.
-* **FastAPI & Prometheus Telemetry:** Exposes OpenAPI 3.1 REST endpoints and operational Prometheus metrics (`/metrics`).
+* **Secure Secret Management:** HMAC secret must be provided via `PATHMIND_HMAC_SECRET` environment variable (minimum 32 characters).
+* **CORS Protection:** Configurable allowed origins via `PATHMIND_CORS_ORIGINS` environment variable.
+* **Input Validation:** All API endpoints enforce strict bounds checking on clinical measurements.
+* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances, Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
 
 ---
 
-## 🧪 Testing & Verification
+## Testing & Verification
 
-Run the automated test suite:
+Run the full automated test suite (39 tests):
 
 ```bash
+# Set test HMAC secret
+export PATHMIND_HMAC_SECRET="test-secret-key-for-pytest-min-32-chars-long"
+
+# Run all tests
 pytest -v
+
+# Run specific test modules
+pytest tests/test_pathmind_atlas.py -v
+pytest tests/test_security.py -v
+pytest tests/test_enrichment.py -v
 ```
 
 Execute high-throughput batch simulation benchmarks:
 
 ```bash
-python simulator.py --tasks 1000 --concurrency 8
+python simulator.py 1000
 ```
 
 ---
 
-## 🐳 Container Deployment
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `PATHMIND_HMAC_SECRET` | Yes | HMAC signing secret (min 32 chars) |
+| `PATHMIND_DATABASE_URL` | No | Database URL (default: `sqlite:///pathmind_atlas.db`) |
+| `PATHMIND_LLM_PROVIDER` | No | LLM provider: `MOCK`, `OLLAMA`, `CLAUDE`, `OPENAI` |
+| `PATHMIND_CORS_ORIGINS` | No | Comma-separated allowed CORS origins |
+| `OLLAMA_BASE_URL` | No | Ollama server URL |
+| `ANTHROPIC_API_KEY` | No | Anthropic Claude API key |
+| `OPENAI_API_KEY` | No | OpenAI API key |
+
+---
+
+## Container Deployment
 
 ```bash
+# Set your production HMAC secret
+export PATHMIND_HMAC_SECRET="your-production-secret-min-32-chars"
+
+# Build and run with Docker Compose
+docker-compose up --build
+
+# Or use Docker directly
 docker build -t pathmind-atlas .
-docker run -p 8000:8000 pathmind-atlas
+docker run -p 8000:8000 -e PATHMIND_HMAC_SECRET="your-secret" pathmind-atlas
+```
+
+---
+
+## Project Structure
+
+```
+pathmind-atlas/
+├── agents/              # Core agent modules
+│   ├── api.py           # FastAPI REST endpoints
+│   ├── base.py          # Security, PHI guard, HMAC audit
+│   ├── llm_factory.py   # LLM provider abstraction
+│   ├── models.py        # SQLAlchemy database models
+│   ├── qc_worker.py     # Slide QC agent
+│   ├── supervisor.py    # Supervisor orchestrator
+│   └── synoptic_worker.py  # CAP synoptic validator
+├── tests/               # Test suite
+│   ├── conftest.py      # Shared test configuration
+│   ├── test_pathmind_atlas.py  # Core functionality tests
+│   ├── test_security.py  # Security & validation tests
+│   └── test_enrichment.py # Enrichment module tests
+├── web/                 # Web dashboard
+├── cli.py               # CLI entry point
+├── simulator.py         # High-throughput simulator
+├── enrichment.py        # Analytics enrichment modules
+├── pyproject.toml       # Project configuration
+├── Dockerfile           # Container build
+└── docker-compose.yml   # Compose orchestration
 ```

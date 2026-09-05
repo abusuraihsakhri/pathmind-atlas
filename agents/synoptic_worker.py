@@ -7,6 +7,7 @@ Architect: Dr. Abu Suraih Sakhri (@abusuraihsakhri)
 from __future__ import annotations
 import json
 import logging
+import uuid
 from enum import Enum
 from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, Field
@@ -292,7 +293,7 @@ class SynopticValidatorAgent:
         llm_resp = self.llm.generate(prompt=llm_prompt, system_prompt="You are an expert surgical pathologist and CAP cancer protocol compliance auditor.")
         narrative = llm_resp.content
 
-        report_id = report_input.report_id or f"SYN-{json.dumps(report_input.model_dump())[:8]}"
+        report_id = report_input.report_id or f"SYN-{uuid.uuid4().hex[:8].upper()}"
 
         # Database persistence
         if persist_to_db:

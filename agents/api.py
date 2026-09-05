@@ -5,6 +5,7 @@ Architect: Dr. Abu Suraih Sakhri (@abusuraihsakhri)
 """
 
 from __future__ import annotations
+import os
 import json
 import logging
 from typing import Optional, Dict, Any, List
@@ -97,12 +98,17 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+allowed_origins = os.getenv(
+    "PATHMIND_CORS_ORIGINS",
+    "http://localhost:8000,http://localhost:3000"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[origin.strip() for origin in allowed_origins if origin.strip()],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # Global instances
@@ -307,6 +313,18 @@ def get_case_detail(case_id: str):
 # ---------------------------------------------------------
 @app.post("/api/slides/qc", response_model=SlideQCResult, tags=["Quality Control"])
 def evaluate_slide_qc(metrics: WSIMetrics):
+    # Input bounds validation
+    if metrics.laplacian_blur_var < 0:
+        raise HTTPException(status_code=400, detail="Laplacian blur variance must be non-negative.")
+    if not (0.0 <= metrics.tissue_fold_pct <= 100.0):
+        raise HTTPException(status_code=400, detail="Tissue fold percentage must be between 0 and 100.")
+    if not (0.0 <= metrics.air_bubble_pct <= 100.0):
+        raise HTTPException(status_code=400, detail="Air bubble percentage must be between 0 and 100.")
+    if not (0.0 <= metrics.stain_intensity_uniformity <= 1.0):
+        raise HTTPException(status_code=400, detail="Stain intensity uniformity must be between 0.0 and 1.0.")
+    if metrics.resolution_mpp <= 0:
+        raise HTTPException(status_code=400, detail="Resolution (mpp) must be positive.")
+
     result = supervisor.qc_worker.evaluate_slide(metrics, persist_to_db=True)
     METRIC_QC_PROCESSED.labels(grade=result.qc_grade.value).inc()
     return result
@@ -317,6 +335,22 @@ def evaluate_slide_qc(metrics: WSIMetrics):
 # ---------------------------------------------------------
 @app.post("/api/synoptic/validate", response_model=SynopticValidationResult, tags=["Synoptic Reporting"])
 def validate_synoptic_report(report_input: SynopticReportInput):
+    # Input bounds validation
+    if report_input.tumor_size_cm is not None and report_input.tumor_size_cm < 0:
+        raise HTTPException(status_code=400, detail="Tumor size must be non-negative.")
+    for margin_name, margin_val in [
+        ("deep_margin_mm", report_input.deep_margin_mm),
+        ("radial_margin_mm", report_input.radial_margin_mm),
+        ("mucosal_margin_mm", report_input.mucosal_margin_mm),
+        ("cervical_margin_mm", report_input.cervical_margin_mm),
+    ]:
+        if margin_val is not None and margin_val < 0:
+            raise HTTPException(status_code=400, detail=f"{margin_name} must be non-negative.")
+    if report_input.nodes_examined is not None and report_input.nodes_examined < 0:
+        raise HTTPException(status_code=400, detail="Nodes examined must be non-negative.")
+    if report_input.nodes_positive is not None and report_input.nodes_positive < 0:
+        raise HTTPException(status_code=400, detail="Nodes positive must be non-negative.")
+
     result = supervisor.synoptic_worker.validate_report(report_input, persist_to_db=True)
     METRIC_SYNOPTIC_PROCESSED.labels(
         protocol=result.protocol_type.value,
