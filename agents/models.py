@@ -7,6 +7,7 @@ from __future__ import annotations
 import os
 import json
 import uuid
+from functools import lru_cache
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional, Dict, Any, List
@@ -230,9 +231,19 @@ class Action(Base):
 # ---------------------------------------------------------
 # Database Initialization & Session Provider
 # ---------------------------------------------------------
+@lru_cache(maxsize=16)
+def _engine_for_url(url: str):
+    """Reuse connection pools for a given database URL."""
+    return create_engine(
+        url,
+        echo=False,
+        connect_args={"check_same_thread": False} if url.startswith("sqlite") else {}
+    )
+
+
 def get_engine(db_url: Optional[str] = None):
     url = db_url or os.getenv("PATHMIND_DATABASE_URL", "sqlite:///pathmind_atlas.db")
-    return create_engine(url, echo=False, connect_args={"check_same_thread": False} if url.startswith("sqlite") else {})
+    return _engine_for_url(url)
 
 
 
