@@ -34,3 +34,6 @@ py-modules = ["cli", "enrichment", "simulator"]
 
 [tool.setuptools.packages.find]
 include = ["agents*"]
+
+[tool.setuptools.data-files]
+"share/pathmind-atlas" = ["web/index.html"]
