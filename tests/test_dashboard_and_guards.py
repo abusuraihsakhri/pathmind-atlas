@@ -48,3 +48,42 @@ def test_incomplete_case_cannot_be_supervisor_approved(client):
     assert reviewed.status_code == 200
     assert reviewed.json()["overall_status"] == "VALIDATION_FAILED"
     assert "required" in reviewed.json()["recommended_action"].lower()
+
+
+def test_unknown_case_is_rejected_before_persistence(client):
+    qc = client.post("/api/slides/qc", json={
+        "case_id": "CASE-NOT-REGISTERED",
+        "laplacian_blur_var": 1100,
+    })
+    assert qc.status_code == 404
+    synoptic = client.post("/api/synoptic/validate", json={
+        "case_id": "CASE-NOT-REGISTERED",
+        "primary_tumor_site": "Breast",
+        "histologic_type": "Carcinoma",
+    })
+    assert synoptic.status_code == 404
+    assert client.post("/api/cases/CASE-NOT-REGISTERED/review").status_code == 404
+
+
+def test_missing_breast_biomarkers_are_not_classified_valid(client):
+    creation = client.post("/api/cases", json={
+        "accession_id_anonymized": "S26-MISSING-BM",
+        "organ_system": "BREAST",
+        "specimen_type": "De-identified lumpectomy",
+    })
+    assert creation.status_code == 201
+    result = client.post("/api/synoptic/validate", json={
+        "case_id": creation.json()["case_id"],
+        "protocol_type": "BREAST_INVASIVE",
+        "primary_tumor_site": "Breast",
+        "histologic_type": "Invasive carcinoma",
+        "histologic_grade": "Grade 2",
+        "tumor_size_cm": 1.5,
+        "deep_margin_mm": 3.5,
+        "pT": "pT1c",
+        "pN": "pN0",
+        "biomarkers": {},
+    })
+    assert result.status_code == 200
+    assert result.json()["validation_status"] == "INCOMPLETE"
+    assert any("MISSING_BREAST_BIOMARKERS" in v for v in result.json()["protocol_violations"])
