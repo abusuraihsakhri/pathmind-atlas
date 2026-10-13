@@ -8,11 +8,13 @@ from __future__ import annotations
 import os
 import json
 import logging
+import hmac
+from pathlib import Path
 from typing import Optional, Dict, Any, List
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request, Depends, status
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, Response, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -102,6 +104,28 @@ allowed_origins = os.getenv(
     "PATHMIND_CORS_ORIGINS",
     "http://localhost:8000,http://localhost:3000"
 ).split(",")
+
+@app.middleware("http")
+async def require_api_key(request: Request, call_next):
+    """Protect case data; local development is allowed without a key."""
+    if request.url.path not in ("/", "/health"):
+        configured = os.getenv("PATHMIND_API_KEY", "")
+        if configured:
+            if len(configured) < 32:
+                return JSONResponse(status_code=503, content={"detail": "PATHMIND_API_KEY must contain at least 32 characters."})
+            provided = request.headers.get("X-Pathmind-API-Key", "")
+            if not hmac.compare_digest(provided, configured):
+                return JSONResponse(status_code=401, content={"detail": "Valid X-Pathmind-API-Key required."})
+        elif request.client is None or request.client.host not in ("127.0.0.1", "::1", "testclient"):
+            return JSONResponse(status_code=503, content={"detail": "Set PATHMIND_API_KEY before remote access."})
+    return await call_next(request)
+
+
+@app.get("/", include_in_schema=False)
+def dashboard():
+    """Serve the same-origin operations console with the backend."""
+    return FileResponse(Path(__file__).resolve().parent.parent / "web" / "index.html")
+
 
 app.add_middleware(
     CORSMiddleware,
