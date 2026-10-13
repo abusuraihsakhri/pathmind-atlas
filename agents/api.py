@@ -174,6 +174,20 @@ class ChatRequest(BaseModel):
     case_id: Optional[str] = None
 
 
+def require_existing_case(case_id: str) -> None:
+    """Reject unknown case IDs before creating persisted QC/synoptic records."""
+    assert_no_phi(case_id)
+    session = get_session()
+    try:
+        found = session.query(Case.case_id).filter(
+            (Case.case_id == case_id) | (Case.accession_id_anonymized == case_id)
+        ).first()
+    finally:
+        session.close()
+    if found is None:
+        raise HTTPException(status_code=404, detail="Case not found. Register the case before analysis.")
+
+
 # ---------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------
@@ -352,6 +366,7 @@ def evaluate_slide_qc(metrics: WSIMetrics):
     if metrics.resolution_mpp <= 0:
         raise HTTPException(status_code=400, detail="Resolution (mpp) must be positive.")
 
+    require_existing_case(metrics.case_id)
     result = supervisor.qc_worker.evaluate_slide(metrics, persist_to_db=True)
     METRIC_QC_PROCESSED.labels(grade=result.qc_grade.value).inc()
     return result
@@ -378,6 +393,7 @@ def validate_synoptic_report(report_input: SynopticReportInput):
     if report_input.nodes_positive is not None and report_input.nodes_positive < 0:
         raise HTTPException(status_code=400, detail="Nodes positive must be non-negative.")
 
+    require_existing_case(report_input.case_id)
     result = supervisor.synoptic_worker.validate_report(report_input, persist_to_db=True)
     METRIC_SYNOPTIC_PROCESSED.labels(
         protocol=result.protocol_type.value,
@@ -391,6 +407,7 @@ def validate_synoptic_report(report_input: SynopticReportInput):
 # ---------------------------------------------------------
 @app.post("/api/cases/{case_id}/review", response_model=CaseReviewSummary, tags=["Supervisor"])
 def review_case_endpoint(case_id: str):
+    require_existing_case(case_id)
     return supervisor.review_case(case_id)
 
 
