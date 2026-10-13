@@ -141,7 +141,7 @@ class PathMindSupervisor:
             case_status = CaseStatus.QC_REJECTED
             recommended = "HOLD CASE: One or more Whole Slide Images failed QC. Request slide recut or optical rescan."
         elif qc_warn > 0:
-            case_status = CaseStatus.QC_REJECTED
+            case_status = CaseStatus.PENDING_QC
             recommended = "HOLD CASE: One or more slides require manual QC review before approval."
         elif not slides or not synoptic_reports:
             case_status = CaseStatus.VALIDATION_FAILED
