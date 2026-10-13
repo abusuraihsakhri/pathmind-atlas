@@ -28,3 +28,9 @@ test = ["pytest>=8.0.0", "ruff>=0.11.0"]
 
 [project.scripts]
 pathmind = "cli:cli"
+
+[tool.setuptools]
+py-modules = ["cli", "enrichment", "simulator"]
+
+[tool.setuptools.packages.find]
+include = ["agents*"]
