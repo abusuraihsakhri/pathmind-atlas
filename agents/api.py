@@ -9,6 +9,7 @@ import os
 import json
 import logging
 import hmac
+import sys
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 from contextlib import asynccontextmanager
@@ -124,7 +125,9 @@ async def require_api_key(request: Request, call_next):
 @app.get("/", include_in_schema=False)
 def dashboard():
     """Serve the same-origin operations console with the backend."""
-    return FileResponse(Path(__file__).resolve().parent.parent / "web" / "index.html")
+    source_page = Path(__file__).resolve().parent.parent / "web" / "index.html"
+    installed_page = Path(sys.prefix) / "share" / "pathmind-atlas" / "index.html"
+    return FileResponse(source_page if source_page.is_file() else installed_page)
 
 
 app.add_middleware(
