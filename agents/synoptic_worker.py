@@ -275,7 +275,7 @@ class SynopticValidatorAgent:
             val_status = ValidationStatus.CRITICAL_FLAG
         elif any("DISCORDANT" in v for v in violations):
             val_status = ValidationStatus.DISCORDANT
-        elif final_completeness < 85.0:
+        elif violations or final_completeness < 85.0:
             val_status = ValidationStatus.INCOMPLETE
         else:
             val_status = ValidationStatus.VALID
