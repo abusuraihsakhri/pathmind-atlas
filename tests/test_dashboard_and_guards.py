@@ -101,3 +101,23 @@ def test_nonfinite_metrics_rejected_by_models():
             case_id="CASE-DEID", primary_tumor_site="Breast",
             histologic_type="Carcinoma", tumor_size_cm=float("inf")
         )
+
+
+def test_audit_chain_remains_valid_under_concurrent_writes():
+    from concurrent.futures import ThreadPoolExecutor
+    from agents.base import AuditLogger, ActorTier
+
+    ledger = AuditLogger()
+    def append(index):
+        ledger.log_event(
+            actor_tier=ActorTier.AGENT,
+            agent_role="QCWorker",
+            action_name="concurrency_check",
+            target_resource_id="DEID-" + str(index),
+            details={"index": index}
+        )
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        list(pool.map(append, range(60)))
+    assert len(ledger.get_events()) == 60
+    assert ledger.verify_integrity() == (True, None)
