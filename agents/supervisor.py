@@ -101,6 +101,7 @@ class PathMindSupervisor:
         # Tally QC
         qc_pass = sum(1 for s in slides if s.qc_grade == QCGrade.PASS)
         qc_reject = sum(1 for s in slides if s.qc_grade == QCGrade.REJECT)
+        qc_warn = sum(1 for s in slides if s.qc_grade == QCGrade.WARN)
 
         # Tally Synoptic
         val_status = ValidationStatus.VALID
@@ -133,9 +134,18 @@ class PathMindSupervisor:
         if any(a["severity"] in ["CRITICAL", "PANIC"] for a in crit_alerts):
             case_status = CaseStatus.CRITICAL_ALERT
             recommended = "HOLD CASE: Critical alerts detected. Address slide optical defects and/or synoptic margin/staging flags immediately."
+        elif val_status == ValidationStatus.CRITICAL_FLAG or m_status == MarginStatus.POSITIVE:
+            case_status = CaseStatus.CRITICAL_ALERT
+            recommended = "HOLD CASE: Critical synoptic findings require pathologist review."
         elif qc_reject > 0:
             case_status = CaseStatus.QC_REJECTED
             recommended = "HOLD CASE: One or more Whole Slide Images failed QC. Request slide recut or optical rescan."
+        elif qc_warn > 0:
+            case_status = CaseStatus.QC_REJECTED
+            recommended = "HOLD CASE: One or more slides require manual QC review before approval."
+        elif not slides or not synoptic_reports:
+            case_status = CaseStatus.VALIDATION_FAILED
+            recommended = "HOLD CASE: Slide QC and at least one synoptic report are required for supervisor approval."
         elif val_status in [ValidationStatus.DISCORDANT, ValidationStatus.INCOMPLETE]:
             case_status = CaseStatus.VALIDATION_FAILED
             recommended = "SYNOPTIC REVIEW REQUIRED: Incomplete or discordant CAP core elements detected."
