@@ -50,15 +50,15 @@ class SynopticReportInput(BaseModel):
     primary_tumor_site: str
     histologic_type: str
     histologic_grade: Optional[str] = None
-    tumor_size_cm: Optional[float] = None
+    tumor_size_cm: Optional[float] = Field(default=None, allow_inf_nan=False)
     
     # Margins
-    deep_margin_mm: Optional[float] = None
-    radial_margin_mm: Optional[float] = None
-    mucosal_margin_mm: Optional[float] = None
-    cervical_margin_mm: Optional[float] = None
+    deep_margin_mm: Optional[float] = Field(default=None, allow_inf_nan=False)
+    radial_margin_mm: Optional[float] = Field(default=None, allow_inf_nan=False)
+    mucosal_margin_mm: Optional[float] = Field(default=None, allow_inf_nan=False)
+    cervical_margin_mm: Optional[float] = Field(default=None, allow_inf_nan=False)
     closest_margin_name: Optional[str] = None
-    closest_margin_distance_mm: Optional[float] = None
+    closest_margin_distance_mm: Optional[float] = Field(default=None, allow_inf_nan=False)
     
     # Nodal & AJCC Staging
     nodes_examined: Optional[int] = 0
