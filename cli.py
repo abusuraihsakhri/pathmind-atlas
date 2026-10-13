@@ -4,11 +4,6 @@ import json
 import click
 import uvicorn
 
-if hasattr(sys.stdout, "reconfigure"):
-    sys.stdout.reconfigure(encoding="utf-8")
-if hasattr(sys.stderr, "reconfigure"):
-    sys.stderr.reconfigure(encoding="utf-8")
-
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -37,6 +32,11 @@ from agents.qc_worker import SlideQCAgent, WSIMetrics
 from agents.synoptic_worker import SynopticValidatorAgent, SynopticReportInput, CAPProtocol
 from agents.supervisor import PathMindSupervisor
 from agents.llm_factory import LLMFactory, LLMProvider
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8")
 
 console = Console()
 

@@ -1,236 +1,202 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pathmind Atlas — Operations Console</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg: #090d16;
-            --card: #111827;
-            --border: #1f293d;
-            --accent: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.25);
-            --text: #f3f4f6;
-            --text-muted: #9ca3af;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --success: #10b981;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            padding: 2rem;
-            min-height: 100vh;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 1.5rem;
-            margin-bottom: 2rem;
-        }
-        .header-title h1 { font-size: 1.6rem; font-weight: 700; color: #fff; }
-        .header-title p { color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem; }
-        .badge {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            background: var(--accent-glow);
-            color: var(--accent);
-            border: 1px solid var(--accent);
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1.2fr;
-            gap: 1.5rem;
-        }
-        .card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        }
-        .card h2 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .form-group { margin-bottom: 1rem; }
-        label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.4rem; }
-        input, select, textarea {
-            width: 100%;
-            padding: 0.65rem 0.9rem;
-            background: #0d1322;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: #fff;
-            font-family: inherit;
-            font-size: 0.9rem;
-        }
-        input:focus, textarea:focus { outline: none; border-color: var(--accent); }
-        .btn {
-            background: var(--accent);
-            color: #fff;
-            border: none;
-            padding: 0.7rem 1.4rem;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: 0.2s;
-            width: 100%;
-        }
-        .btn:hover { background: #2563eb; }
-        .terminal {
-            background: #060911;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.85rem;
-            color: #10b981;
-            height: 380px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
-        .metrics-bar {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        .metric-box {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1rem;
-            text-align: center;
-        }
-        .metric-val { font-size: 1.4rem; font-weight: 700; color: #fff; margin-top: 0.25rem; }
-        .metric-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>PathMind Atlas | Pathology Operations</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color-scheme: dark;
+      --bg:#0b1220; --surface:#152135; --line:#334155; --fg:#f1f5f9; --muted:#cbd5e1; --accent:#93c5fd; }
+    * { box-sizing:border-box }
+    body { background:var(--bg); color:var(--fg); margin:0; line-height:1.5 }
+    main { max-width:1120px; margin:auto; padding:1.5rem }
+    header { display:flex; align-items:start; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1rem }
+    h1 { font-size:1.8rem; margin:0 }
+    h2 { font-size:1.13rem; margin:0 0 1rem }
+    p { margin:.4rem 0; color:var(--muted) }
+    .notice { border-left:3px solid #fbbf24; padding:.65rem 1rem; background:#252333; margin:1rem 0 1.5rem }
+    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem }
+    .card { border:1px solid var(--line); border-radius:.75rem; background:var(--surface); padding:1.1rem }
+    .wide { grid-column:1 / -1 }
+    .fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.75rem }
+    .field { display:flex; flex-direction:column; min-width:0 }
+    .span { grid-column:1 / -1 }
+    label { font-size:.87rem; color:var(--muted); margin-bottom:.25rem }
+    input, select { width:100%; min-height:2.7rem; border:1px solid #64748b; border-radius:.4rem;
+      padding:.55rem .7rem; background:#0b1220; color:var(--fg); font:inherit }
+    button { border:0; background:#2563eb; color:white; padding:.7rem 1.1rem; border-radius:.45rem;
+      min-height:2.7rem; cursor:pointer; font:inherit; font-weight:650; margin-top:.9rem }
+    button:hover { background:#1d4ed8 }
+    button:disabled { opacity:.6; cursor:wait }
+    :focus-visible { outline:3px solid #fbbf24; outline-offset:2px }
+    .subtle { font-size:.85rem }
+    .status { font-weight:700; color:var(--accent) }
+    pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:25rem; overflow:auto; margin:.75rem 0 0;
+      background:#080d18; padding:1rem; border:1px solid var(--line); border-radius:.5rem; font-size:.84rem }
+    footer { font-size:.82rem; padding-top:1.5rem; color:var(--muted) }
+    @media (max-width:760px) { main { padding:1rem } .grid,.fields { grid-template-columns:1fr } .wide,.span { grid-column:auto } }
+  </style>
 </head>
 <body>
-
-    <div class="header">
-        <div class="header-title">
-            <h1>Pathmind Atlas</h1>
-            <p>Domain: Clinical & Cryptographic AI | Standard: CAP / CLSI / NIST Standards | LabMind-Atlas Architecture</p>
-        </div>
-        <div>
-            <span class="badge">Air-Gapped Active</span>
-            <span class="badge" style="background: rgba(16,185,129,0.2); color: #10b981; border-color: #10b981;">Zero-PHI Guard Active</span>
-        </div>
+<main>
+  <header>
+    <div><h1>PathMind Atlas</h1><p>Pathology QC, synoptic checks, supervisor review and audit verification</p></div>
+    <div role="status" id="connection" class="status">Checking API…</div>
+  </header>
+  <p class="notice"><strong>Research / workflow support only.</strong> Use de-identified inputs. Automated results are not a clinical diagnosis, CAP certification, or a substitute for pathologist review. An HMAC audit chain does not provide durable storage or regulatory compliance on its own.</p>
+  <div class="card" style="margin-bottom:1rem">
+    <div class="fields">
+      <div class="field">
+        <label for="apiKey">API key (only if configured on server)</label>
+        <input id="apiKey" type="password" autocomplete="off" placeholder="X-Pathmind-API-Key">
+      </div>
+      <div class="field">
+        <label for="workingCase">Current case ID (auto-filled on creation)</label>
+        <input id="workingCase" autocomplete="off" placeholder="CASE-…">
+      </div>
     </div>
-
-    <div class="metrics-bar">
-        <div class="metric-box">
-            <div class="metric-label">System Status</div>
-            <div class="metric-val" style="color: var(--success);" id="m-status">OPTIMAL</div>
+    <p class="subtle">This page talks to the same-origin FastAPI service. The API key is kept in page memory and is never written to browser storage. No simulated results are shown.</p>
+  </div>
+  <div class="grid">
+    <section class="card">
+      <h2>1. Register a de-identified case</h2>
+      <form id="caseForm">
+        <div class="fields">
+          <div class="field"><label for="accession">Anonymized accession ID</label><input id="accession" required maxlength="64" placeholder="S26-1002"></div>
+          <div class="field"><label for="organ">Organ system</label><select id="organ"><option>BREAST</option><option>COLON</option><option>PROSTATE</option><option>LUNG</option><option>SKIN</option><option>GENERAL</option></select></div>
+          <div class="field span"><label for="specimen">Specimen description</label><input id="specimen" required maxlength="128" placeholder="De-identified specimen description"></div>
         </div>
-        <div class="metric-box">
-            <div class="metric-label">Tasks Processed</div>
-            <div class="metric-val" id="m-tasks">142</div>
+        <button type="submit">Create case</button>
+      </form>
+    </section>
+    <section class="card">
+      <h2>2. Evaluate slide QC metrics</h2>
+      <form id="qcForm">
+        <div class="fields">
+          <div class="field"><label for="blur">Laplacian variance</label><input id="blur" type="number" min="0" step="any" value="1200" required></div>
+          <div class="field"><label for="fold">Tissue fold area (%)</label><input id="fold" type="number" min="0" max="100" step="any" value="0" required></div>
+          <div class="field"><label for="bubble">Air bubble area (%)</label><input id="bubble" type="number" min="0" max="100" step="any" value="0" required></div>
+          <div class="field"><label for="uniformity">Stain uniformity (0–1)</label><input id="uniformity" type="number" min="0" max="1" step="any" value="0.95" required></div>
+          <div class="field span"><label><input id="penMark" type="checkbox" style="width:auto;min-height:0"> Pen mark on tissue</label></div>
         </div>
-        <div class="metric-box">
-            <div class="metric-label">Audit Blocks Signed</div>
-            <div class="metric-val" id="m-audit">142</div>
+        <button type="submit">Run QC</button>
+      </form>
+    </section>
+    <section class="card">
+      <h2>3. Validate a synoptic report</h2>
+      <form id="synForm">
+        <div class="fields">
+          <div class="field"><label for="protocol">Protocol</label>
+            <select id="protocol"><option>BREAST_INVASIVE</option><option>COLORECTAL_RESECTION</option><option>PROSTATE_RADICAL</option><option>LUNG_RESECTION</option><option>MELANOMA_EXCISION</option><option>GENERAL_CANCER</option></select>
+          </div>
+          <div class="field"><label for="site">Primary tumor site</label><input id="site" required placeholder="Breast"></div>
+          <div class="field"><label for="histology">Histologic type</label><input id="histology" required placeholder="Invasive carcinoma"></div>
+          <div class="field"><label for="grade">Histologic grade</label><input id="grade" placeholder="Grade 2"></div>
+          <div class="field"><label for="size">Tumor size (cm)</label><input id="size" type="number" min="0" step="any"></div>
+          <div class="field"><label for="margin">Deep margin (mm)</label><input id="margin" type="number" min="0" step="any"></div>
+          <div class="field"><label for="nodes">Nodes examined</label><input id="nodes" type="number" min="0" step="1"></div>
+          <div class="field"><label for="positiveNodes">Nodes positive</label><input id="positiveNodes" type="number" min="0" step="1"></div>
+          <div class="field"><label for="pt">pT</label><input id="pt" placeholder="pT2"></div>
+          <div class="field"><label for="pn">pN</label><input id="pn" placeholder="pN0"></div>
         </div>
-        <div class="metric-box">
-            <div class="metric-label">PHI Interceptions</div>
-            <div class="metric-val" style="color: var(--accent);" id="m-phi">0</div>
-        </div>
-    </div>
-
-    <div class="grid">
-        <div class="card">
-            <h2>⚙️ Dispatch Distributed Component Audit</h2>
-            <div class="form-group">
-                <label>Task / Sample ID</label>
-                <input type="text" id="task_id" value="TASK-2026-LIVE-01">
-            </div>
-            <div class="form-group">
-                <label>Target Identifier</label>
-                <input type="text" id="target_id" value="SPECIMEN-ALPHA-77">
-            </div>
-            <div class="form-group">
-                <label>Primary Measurement / Value</label>
-                <input type="number" id="primary_metric" value="29.4" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Secondary Metric / Kinetic Index</label>
-                <input type="number" id="secondary_metric" value="14.8" step="0.1">
-            </div>
-            <div class="form-group">
-                <label>Status / Phenotype Descriptor</label>
-                <input type="text" id="status_descriptor" value="DISCORDANT_ANOMALY">
-            </div>
-            <div class="form-group">
-                <label><input type="checkbox" id="is_critical" checked> Trigger Emergency / Critical Flag</label>
-            </div>
-            <button class="btn" onclick="runAudit()">Execute Distributed Component Audit</button>
-        </div>
-
-        <div class="card">
-            <h2>📊 Real-Time Consensus Dossier & Audit Log</h2>
-            <div class="terminal" id="outputConsole">// Pathmind Atlas Operations Console Ready
-// Connection established with Air-Gapped Supervisor
-// Cryptographic HMAC-SHA256 audit ledger loaded.
-// Ready for live task payload dispatch...</div>
-        </div>
-    </div>
-
-    <script>
-        async function runAudit() {
-            const consoleEl = document.getElementById('outputConsole');
-            consoleEl.innerText = "// Dispatching task across specialized workers...
-// Invoking InvariantQCWorker, SafetyEscalationWorker, ProtocolWorker...";
-
-            const payload = {
-                task_id: document.getElementById('task_id').value,
-                target_identifier: document.getElementById('target_id').value,
-                primary_metric: parseFloat(document.getElementById('primary_metric').value),
-                secondary_metric: parseFloat(document.getElementById('secondary_metric').value),
-                status_descriptor: document.getElementById('status_descriptor').value,
-                is_critical_flag: document.getElementById('is_critical').checked
-            };
-
-            try {
-                const res = await fetch('/api/audit', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                consoleEl.innerText = JSON.stringify(data, null, 2);
-                document.getElementById('m-tasks').innerText = parseInt(document.getElementById('m-tasks').innerText) + 1;
-                document.getElementById('m-audit').innerText = parseInt(document.getElementById('m-audit').innerText) + 1;
-            } catch (err) {
-                consoleEl.innerText = "// Offline / Simulation Output:\n" + JSON.stringify({
-                    dossier_id: "DOSSIER-SIM-" + Math.floor(Math.random()*10000),
-                    system: "pathmind-atlas",
-                    domain: "Clinical & Cryptographic AI",
-                    task_id: payload.task_id,
-                    overall_urgency: payload.is_critical_flag ? "CRITICAL_STAT_PANIC" : "ELEVATED_RISK",
-                    integrity_status: "DISCORDANT_ANOMALY",
-                    alerts: [
-                        { worker: "InvariantQCWorker", alert: "Primary metric exceeds upper reference bound" },
-                        { worker: "SafetyEscalationWorker", alert: "Critical emergency interlock flag active" }
-                    ],
-                    audit_hash: "HMAC_SHA256_e83f9a72b941d6c381f9"
-                }, null, 2);
-            }
-        }
-    </script>
+        <p class="subtle">Advanced elements and biomarkers are available through the API. Missing items may reduce completeness.</p>
+        <button type="submit">Validate synoptic report</button>
+      </form>
+    </section>
+    <section class="card">
+      <h2>4. Review and audit</h2>
+      <p>Run supervisor review after slide QC and synoptic validation. You can inspect the audit chain separately.</p>
+      <button type="button" id="reviewBtn">Review current case</button>
+      <button type="button" id="verifyBtn">Verify audit integrity</button>
+      <p class="subtle">The in-memory audit ledger resets when the API process restarts. Do not treat it as persistent evidence.</p>
+    </section>
+    <section class="card wide">
+      <h2>API result</h2>
+      <p role="status" id="responseStatus" aria-live="polite">No operation submitted.</p>
+      <pre id="output" aria-live="polite">Results will appear here. API errors are reported rather than replaced by simulated output.</pre>
+    </section>
+  </div>
+  <footer>Backend required · OpenAPI documentation: <a href="/docs" style="color:var(--accent)">/docs</a> · No GitHub Pages backend</footer>
+</main>
+<script>
+  "use strict";
+  const el = (id) => document.getElementById(id);
+  const text = (id) => el(id).value.trim();
+  const numberOrNull = (id) => text(id) === "" ? null : Number(text(id));
+  const workingCase = () => {
+    const id = text("workingCase");
+    if (!id) throw new Error("Create a case or enter a case ID first.");
+    return id;
+  };
+  async function api(path, method, body) {
+    const headers = {};
+    if (text("apiKey")) headers["X-Pathmind-API-Key"] = text("apiKey");
+    if (body !== undefined) headers["Content-Type"] = "application/json";
+    const response = await fetch(path, {
+      method: method, headers: headers,
+      body: body === undefined ? undefined : JSON.stringify(body)
+    });
+    const contentType = response.headers.get("content-type") || "";
+    const data = contentType.includes("json") ? await response.json() : await response.text();
+    if (!response.ok) throw new Error("HTTP " + response.status + ": " + JSON.stringify(data));
+    return data;
+  }
+  async function run(button, label, action) {
+    button.disabled = true;
+    el("responseStatus").textContent = label + "…";
+    try {
+      const result = await action();
+      el("output").textContent = JSON.stringify(result, null, 2);
+      el("responseStatus").textContent = label + " completed.";
+    } catch (error) {
+      el("responseStatus").textContent = label + " failed.";
+      el("output").textContent = String(error.message || error);
+    } finally { button.disabled = false; }
+  }
+  function formSubmit(formId, label, action) {
+    el(formId).addEventListener("submit", function(event) {
+      event.preventDefault();
+      if (!event.currentTarget.reportValidity()) return;
+      run(event.submitter || event.currentTarget.querySelector("button"), label, action);
+    });
+  }
+  formSubmit("caseForm", "Case registration", async () => {
+    const result = await api("/api/cases", "POST", {
+      accession_id_anonymized:text("accession"),
+      organ_system:text("organ"),
+      specimen_type:text("specimen")
+    });
+    el("workingCase").value = result.case_id;
+    return result;
+  });
+  formSubmit("qcForm", "Slide QC", () => api("/api/slides/qc", "POST", {
+    case_id:workingCase(), laplacian_blur_var:numberOrNull("blur"),
+    tissue_fold_pct:numberOrNull("fold"), air_bubble_pct:numberOrNull("bubble"),
+    stain_intensity_uniformity:numberOrNull("uniformity"),
+    pen_mark_detected:el("penMark").checked
+  }));
+  formSubmit("synForm", "Synoptic validation", () => api("/api/synoptic/validate", "POST", {
+    case_id:workingCase(), protocol_type:text("protocol"), primary_tumor_site:text("site"),
+    histologic_type:text("histology"), histologic_grade:text("grade") || null,
+    tumor_size_cm:numberOrNull("size"), deep_margin_mm:numberOrNull("margin"),
+    nodes_examined:numberOrNull("nodes"), nodes_positive:numberOrNull("positiveNodes"),
+    pT:text("pt") || null, pN:text("pn") || null
+  }));
+  el("reviewBtn").addEventListener("click", function() {
+    run(this, "Supervisor review", () => api("/api/cases/" + encodeURIComponent(workingCase()) + "/review", "POST"));
+  });
+  el("verifyBtn").addEventListener("click", function() {
+    run(this, "Audit verification", () => api("/api/audit/verify", "GET"));
+  });
+  fetch("/health").then(r => {
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  }).then(data => {
+    el("connection").textContent = "API: " + data.status;
+  }).catch(() => {
+    el("connection").textContent = "API offline";
+  });
+</script>
 </body>
 </html>

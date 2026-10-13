@@ -37,12 +37,12 @@ class WSIMetrics(BaseModel):
     case_id: str
     block_id: str = "A1"
     stain_type: str = "H&E"
-    resolution_mpp: float = 0.25
-    laplacian_blur_var: float = Field(default=1200.0, description="Variance of Laplacian focus score. <300 = blurred.")
-    tissue_fold_pct: float = Field(default=0.0, description="Percentage of tissue area occluded by folds.")
+    resolution_mpp: float = Field(default=0.25, allow_inf_nan=False)
+    laplacian_blur_var: float = Field(default=1200.0, allow_inf_nan=False, description="Variance of Laplacian focus score. <300 = blurred.")
+    tissue_fold_pct: float = Field(default=0.0, allow_inf_nan=False, description="Percentage of tissue area occluded by folds.")
     pen_mark_detected: bool = Field(default=False, description="Marker or ink artifact obscuring tissue.")
-    air_bubble_pct: float = Field(default=0.0, description="Coverslip air bubble coverage %.")
-    stain_intensity_uniformity: float = Field(default=0.95, description="Uniformity of H&E/IHC chromogen (0 to 1).")
+    air_bubble_pct: float = Field(default=0.0, allow_inf_nan=False, description="Coverslip air bubble coverage %.")
+    stain_intensity_uniformity: float = Field(default=0.95, allow_inf_nan=False, description="Uniformity of H&E/IHC chromogen (0 to 1).")
 
 
 class SlideQCResult(BaseModel):

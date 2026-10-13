@@ -1,212 +1,98 @@
-# Pathmind Atlas
+# PathMind Atlas
 
-> **Domain:** Clinical Decision Support & Biomedical Computing
-> **Reference Guidelines & Standards:** `Standard Clinical Formulations & ISO/IEC Quality Frameworks`
+PathMind Atlas is a Python 3.10+ research/workflow application for de-identified surgical pathology case tracking, metric-based whole-slide image QC, synoptic completeness and consistency checks, supervisor review, and an in-process HMAC-SHA256 audit chain. It provides a CLI, FastAPI REST API, and a browser operations console served by FastAPI.
 
-<div align="center">
+**Not a validated medical device or clinical decision system.** QC thresholds and stage/margin checks are simplified heuristics, not a substitute for current CAP/AJCC protocol rules or a qualified pathologist. Do not enter identifiable patient data.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688.svg?logo=fastapi&logoColor=white)
-![Audit Trail](https://img.shields.io/badge/Audit-HMAC--SHA256_Tamper--Evident-brightgreen.svg)
-![Zero-PHI Guard](https://img.shields.io/badge/Guard-Zero--PHI_Outbound-blue.svg)
-![Docker](https://img.shields.io/badge/Docker-Ready-2496ED.svg?logo=docker&logoColor=white)
-
-</div>
-
----
-
-## What It Does
-
-**Pathmind Atlas** is an advanced analytical and computational platform implementing Whole-Slide Imaging Laplacian blur QC worker, CAP cancer synoptic protocol margin checker (0.0mm panic alert), zero-PHI outbound guard, HMAC audit trail, FastAPI REST API, Web Dashboard & CLI. (39/39 tests passing).
-
----
-
-## Key Capabilities & Algorithmic Modules
-
-- **Deterministic Calculation Engine**: Strict compliance with standard reference formulations and thresholds.
-- **Risk & Urgency Classification**: Multi-tier categorization with automated clinical/operational action recommendations.
-- **Validation & Guardrails**: Rigorous input bounds checking and anomaly detection.
-- **Cryptographic Audit Trail**: Tamper-evident HMAC-SHA256 chained audit logs.
-- **Zero-PHI Outbound Guard**: Active regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-
----
-
-## Installation
+## Run locally
 
 ```bash
-# Clone the repository
 git clone https://github.com/abusuraihsakhri/pathmind-atlas.git
 cd pathmind-atlas
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -e .
-
-# Set required environment variable for HMAC audit security
-export PATHMIND_HMAC_SECRET="your-secure-32-character-minimum-secret-key"
-```
-
----
-
-## CLI Quickstart & Usage
-
-### 1. Guided Interactive Mode
-```bash
-python cli.py
-```
-
-### 2. Direct Parameterized Evaluation
-```bash
-python cli.py --accession <value> --organ <value> --specimen <value> --history <value>
-```
-
-### 3. Initialize Database
-```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -e .
+export PATHMIND_HMAC_SECRET="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
 python cli.py init
+python cli.py serve
 ```
 
-### 4. Create a Case
-```bash
-python cli.py create_case --accession S26-1002 --organ BREAST --specimen "Total Mastectomy" --history "Invasive ductal carcinoma"
-```
+Open **http://127.0.0.1:8000/** for the web console, or **http://127.0.0.1:8000/docs** for OpenAPI documentation. Windows users can activate with `.venv\Scripts\activate` and set environment variables with their shell's syntax. Localhost is the default bind address.
 
-### 5. Run Slide QC
-```bash
-python cli.py qc_slide --case-id CASE-XXX --blur-var 1200.0 --tissue-fold 0.5 --air-bubble 0.0
-```
+The console calls the *running backend*. Register an anonymized case, run QC metrics, validate a synoptic report, and then request supervisor review. The review cannot approve cases with no slides, no synoptic reports, rejected/warning QC, or critical validation flags. API errors are shown, not replaced with sample output. For complete protocol input fields, use `/docs`.
 
-### 6. Validate Synoptic Report
-```bash
-python cli.py validate_synoptic --case-id CASE-XXX --protocol BREAST_INVASIVE --histology "Invasive Ductal Carcinoma" --size 2.4 --deep-margin 3.5 --radial-margin 1.2
-```
-
-### 7. Review Case (Supervisor Orchestration)
-```bash
-python cli.py review_case --case-id CASE-XXX
-```
-
-### 8. Verify Audit Integrity
-```bash
-python cli.py audit_verify
-```
-
-### 9. Launch API Server
-```bash
-python cli.py serve --host 127.0.0.1 --port 8000
-```
-
----
-
-## REST API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/health` | System health check |
-| GET | `/metrics` | Prometheus operational metrics |
-| POST | `/api/cases` | Create new pathology case |
-| GET | `/api/cases` | List all cases |
-| GET | `/api/cases/{case_id}` | Get case details |
-| POST | `/api/slides/qc` | Submit slide for QC evaluation |
-| POST | `/api/synoptic/validate` | Validate synoptic cancer report |
-| POST | `/api/cases/{case_id}/review` | Orchestrate full case review |
-| GET | `/api/audit` | Get cryptographic audit trail |
-| GET | `/api/audit/verify` | Verify audit chain integrity |
-| POST | `/api/chat` | Operations chat assistant |
-
----
-
-## Security & Enterprise Architecture
-
-* **Zero-PHI Outbound Interceptor:** Active regex inspection blocking SSNs, MRNs, phone numbers, and patient identifiers.
-* **Tamper-Evident HMAC-SHA256 Audit Trail:** Chained, cryptographically signed logs for every evaluation and state transition.
-* **Secure Secret Management:** HMAC secret must be provided via `PATHMIND_HMAC_SECRET` environment variable (minimum 32 characters).
-* **CORS Protection:** Configurable allowed origins via `PATHMIND_CORS_ORIGINS` environment variable.
-* **Input Validation:** All API endpoints enforce strict bounds checking on clinical measurements.
-* **Air-Gapped LLM Reasoning Adapter:** Agnostic integration for local Ollama instances, Claude 3.5 Sonnet, GPT-4o, and deterministic test mocks.
-
----
-
-## Testing & Verification
-
-Run the full automated test suite (39 tests):
+Useful CLI commands:
 
 ```bash
-# Set test HMAC secret
-export PATHMIND_HMAC_SECRET="test-secret-key-for-pytest-min-32-chars-long"
-
-# Run all tests
-pytest -v
-
-# Run specific test modules
-pytest tests/test_pathmind_atlas.py -v
-pytest tests/test_security.py -v
-pytest tests/test_enrichment.py -v
+python cli.py --help
+python cli.py create-case --help
+python cli.py qc-slide --help
+python cli.py validate-synoptic --help
+python cli.py review-case --help
+python cli.py audit-verify
 ```
 
-Execute high-throughput batch simulation benchmarks:
+The command-line entry point `pathmind` is also installed. The CLI uses Click, so subcommands appear with hyphens.
+
+## API
+
+| Method | Route | Purpose |
+|---|---|---|
+| GET | `/` | Same-origin operations console |
+| GET | `/health` | Health response |
+| GET | `/metrics` | Prometheus metrics |
+| POST / GET | `/api/cases` | Register / list de-identified cases |
+| GET | `/api/cases/{case_id}` | Case detail |
+| POST | `/api/slides/qc` | Score measured QC inputs |
+| POST | `/api/synoptic/validate` | Check reported synoptic fields |
+| POST | `/api/cases/{case_id}/review` | Supervisor summary |
+| GET | `/api/audit` | In-memory audit events |
+| GET | `/api/audit/verify` | Verify HMAC chain |
+| POST | `/api/chat` | Operations assistant |
+
+## Configuration and privacy
+
+| Variable | Meaning |
+|---|---|
+| `PATHMIND_HMAC_SECRET` | **Required**, at least 32 characters; used to sign audit events |
+| `PATHMIND_API_KEY` | Optional on loopback, **required for nonlocal API access**; at least 32 characters, supplied through `X-Pathmind-API-Key` |
+| `PATHMIND_DATABASE_URL` | SQLAlchemy URL (default `sqlite:///pathmind_atlas.db`) |
+| `PATHMIND_CORS_ORIGINS` | Comma-separated allowed origins (default localhost:8000 and :3000) |
+| `PATHMIND_LLM_PROVIDER` | `MOCK` (default), `OLLAMA`, `CLAUDE`, `OPENAI` |
+| `OLLAMA_BASE_URL`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY` | Provider-specific settings |
+
+The PHI regex guard detects **some** identifiers; it cannot guarantee de-identification or regulatory compliance. Case data are persisted in the configured database. The HMAC audit chain and its events are **process-local memory only**, are lost on restart, and are not a durable/legal audit record. If an external language-model provider is configured, de-identified prompts leave the local service; use `MOCK` for offline deterministic responses.
+
+Local API calls without a configured API key work only from the loopback interface (and the test client). Requests from other hosts are refused without `PATHMIND_API_KEY`. When an API key is configured, every route except `/` and `/health` requires the header. The console has a password field for this key, which it does not persist. For any remote use, provide TLS and a suitably controlled deployment; an API key alone is not comprehensive security.
+
+## Docker
+
+Provide fresh secrets rather than committing them:
 
 ```bash
-python simulator.py 1000
+export PATHMIND_HMAC_SECRET="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
+export PATHMIND_API_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
+docker compose up --build
 ```
 
----
+The Compose port is bound to `127.0.0.1:8000` by default. The browser console needs the API key from the environment to call protected routes. The Docker filesystem is ephemeral unless you mount persistent storage for SQLite; do not rely on container restarts to preserve cases.
 
-## Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `PATHMIND_HMAC_SECRET` | Yes | HMAC signing secret (min 32 chars) |
-| `PATHMIND_DATABASE_URL` | No | Database URL (default: `sqlite:///pathmind_atlas.db`) |
-| `PATHMIND_LLM_PROVIDER` | No | LLM provider: `MOCK`, `OLLAMA`, `CLAUDE`, `OPENAI` |
-| `PATHMIND_CORS_ORIGINS` | No | Comma-separated allowed CORS origins |
-| `OLLAMA_BASE_URL` | No | Ollama server URL |
-| `ANTHROPIC_API_KEY` | No | Anthropic Claude API key |
-| `OPENAI_API_KEY` | No | OpenAI API key |
-
----
-
-## Container Deployment
+## Tests
 
 ```bash
-# Set your production HMAC secret
-export PATHMIND_HMAC_SECRET="your-production-secret-min-32-chars"
-
-# Build and run with Docker Compose
-docker-compose up --build
-
-# Or use Docker directly
-docker build -t pathmind-atlas .
-docker run -p 8000:8000 -e PATHMIND_HMAC_SECRET="your-secret" pathmind-atlas
+python -m pip install -e ".[test]"
+python -m pip check
+python -m compileall -q agents cli.py enrichment.py simulator.py tests
+ruff check --select E4,E7,E9 .
+python -m pytest -q
 ```
 
----
+GitHub Actions tests Python 3.10, 3.11 and 3.12 and checks the browser JavaScript syntax. This is a backend application with a database, signing key, and optional LLM connections. **GitHub Pages cannot host its actual workflows**, and conversion to browser Python would not preserve the server-side persistence and security model.
 
-## Project Structure
+## Technology and compatibility
 
-```
-pathmind-atlas/
-├── agents/              # Core agent modules
-│   ├── api.py           # FastAPI REST endpoints
-│   ├── base.py          # Security, PHI guard, HMAC audit
-│   ├── llm_factory.py   # LLM provider abstraction
-│   ├── models.py        # SQLAlchemy database models
-│   ├── qc_worker.py     # Slide QC agent
-│   ├── supervisor.py    # Supervisor orchestrator
-│   └── synoptic_worker.py  # CAP synoptic validator
-├── tests/               # Test suite
-│   ├── conftest.py      # Shared test configuration
-│   ├── test_pathmind_atlas.py  # Core functionality tests
-│   ├── test_security.py  # Security & validation tests
-│   └── test_enrichment.py # Enrichment module tests
-├── web/                 # Web dashboard
-├── cli.py               # CLI entry point
-├── simulator.py         # High-throughput simulator
-├── enrichment.py        # Analytics enrichment modules
-├── pyproject.toml       # Project configuration
-├── Dockerfile           # Container build
-└── docker-compose.yml   # Compose orchestration
-```
+Python, FastAPI, SQLAlchemy/SQLite, Pydantic, Click, Rich, and plain HTML/CSS/JavaScript. The console uses modern browser fetch and form APIs; it has no CDN runtime dependencies. REST access is also available without the console.
+
+## License
+
+The repository does not currently include a LICENSE file. Confirm licensing terms with the repository owner before reuse or redistribution.

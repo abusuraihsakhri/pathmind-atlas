@@ -13,6 +13,7 @@ import logging
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 from datetime import datetime, timezone
+from threading import RLock
 from pydantic import BaseModel, Field
 
 # Setup logger
@@ -161,12 +162,14 @@ class AuditLogger:
     """
     def __init__(self, signer: Optional[HMACSigner] = None):
         self.signer = signer or HMACSigner()
+        self._lock = RLock()
         self._last_hash = "GENESIS_BLOCK_PATHMIND_ATLAS_2026"
         self._events: List[AuditEventSchema] = []
 
     @property
     def last_hash(self) -> str:
-        return self._last_hash
+        with self._lock:
+            return self._last_hash
 
     def log_event(
         self,
@@ -180,82 +183,85 @@ class AuditLogger:
         Creates a tamper-evident audit record, ensures zero-PHI in details,
         computes SHA-256 chain hash and HMAC-SHA256 signature.
         """
-        # Ensure zero PHI before committing to immutable log
-        assert_no_phi(details)
-        assert_no_phi(target_resource_id)
+        with self._lock:
+            # Ensure zero PHI before committing to immutable log
+            assert_no_phi(details)
+            assert_no_phi(target_resource_id)
 
-        now_str = datetime.now(timezone.utc).isoformat()
-        event_id = hashlib.sha256(f"{self._last_hash}:{action_name}:{now_str}".encode()).hexdigest()[:16]
+            now_str = datetime.now(timezone.utc).isoformat()
+            event_id = hashlib.sha256(f"{self._last_hash}:{action_name}:{now_str}".encode()).hexdigest()[:16]
 
-        role_str = agent_role.value if isinstance(agent_role, AgentRole) else str(agent_role)
+            role_str = agent_role.value if isinstance(agent_role, AgentRole) else str(agent_role)
 
-        data_to_hash = {
-            "event_id": event_id,
-            "timestamp": now_str,
-            "actor_tier": actor_tier.value,
-            "agent_role": role_str,
-            "action_name": action_name,
-            "target_resource_id": target_resource_id,
-            "details": details,
-            "prev_hash": self._last_hash
-        }
+            data_to_hash = {
+                "event_id": event_id,
+                "timestamp": now_str,
+                "actor_tier": actor_tier.value,
+                "agent_role": role_str,
+                "action_name": action_name,
+                "target_resource_id": target_resource_id,
+                "details": details,
+                "prev_hash": self._last_hash
+            }
 
-        canonical_bytes = json.dumps(data_to_hash, sort_keys=True, separators=(",", ":")).encode("utf-8")
-        current_hash = hashlib.sha256(canonical_bytes).hexdigest()
-        hmac_sig = self.signer.sign_payload(current_hash)
+            canonical_bytes = json.dumps(data_to_hash, sort_keys=True, separators=(",", ":")).encode("utf-8")
+            current_hash = hashlib.sha256(canonical_bytes).hexdigest()
+            hmac_sig = self.signer.sign_payload(current_hash)
 
-        event = AuditEventSchema(
-            event_id=event_id,
-            timestamp=now_str,
-            actor_tier=actor_tier,
-            agent_role=role_str,
-            action_name=action_name,
-            target_resource_id=target_resource_id,
-            details=details,
-            prev_hash=self._last_hash,
-            current_hash=current_hash,
-            hmac_signature=hmac_sig
-        )
+            event = AuditEventSchema(
+                event_id=event_id,
+                timestamp=now_str,
+                actor_tier=actor_tier,
+                agent_role=role_str,
+                action_name=action_name,
+                target_resource_id=target_resource_id,
+                details=details,
+                prev_hash=self._last_hash,
+                current_hash=current_hash,
+                hmac_signature=hmac_sig
+            )
 
-        self._last_hash = current_hash
-        self._events.append(event)
-        return event
+            self._last_hash = current_hash
+            self._events.append(event)
+            return event
 
     def verify_integrity(self) -> Tuple[bool, Optional[str]]:
         """
         Verifies the full cryptographic hash chain and HMAC signatures.
         Returns (True, None) if completely intact, or (False, reason).
         """
-        expected_prev = "GENESIS_BLOCK_PATHMIND_ATLAS_2026"
-        for idx, ev in enumerate(self._events):
-            if ev.prev_hash != expected_prev:
-                return False, f"Broken chain link at index {idx}: expected prev_hash {expected_prev}, got {ev.prev_hash}"
+        with self._lock:
+            expected_prev = "GENESIS_BLOCK_PATHMIND_ATLAS_2026"
+            for idx, ev in enumerate(self._events):
+                if ev.prev_hash != expected_prev:
+                    return False, f"Broken chain link at index {idx}: expected prev_hash {expected_prev}, got {ev.prev_hash}"
 
-            data_to_hash = {
-                "event_id": ev.event_id,
-                "timestamp": ev.timestamp,
-                "actor_tier": ev.actor_tier.value if hasattr(ev.actor_tier, "value") else str(ev.actor_tier),
-                "agent_role": ev.agent_role,
-                "action_name": ev.action_name,
-                "target_resource_id": ev.target_resource_id,
-                "details": ev.details,
-                "prev_hash": ev.prev_hash
-            }
-            canonical_bytes = json.dumps(data_to_hash, sort_keys=True, separators=(",", ":")).encode("utf-8")
-            recomputed_hash = hashlib.sha256(canonical_bytes).hexdigest()
+                data_to_hash = {
+                    "event_id": ev.event_id,
+                    "timestamp": ev.timestamp,
+                    "actor_tier": ev.actor_tier.value if hasattr(ev.actor_tier, "value") else str(ev.actor_tier),
+                    "agent_role": ev.agent_role,
+                    "action_name": ev.action_name,
+                    "target_resource_id": ev.target_resource_id,
+                    "details": ev.details,
+                    "prev_hash": ev.prev_hash
+                }
+                canonical_bytes = json.dumps(data_to_hash, sort_keys=True, separators=(",", ":")).encode("utf-8")
+                recomputed_hash = hashlib.sha256(canonical_bytes).hexdigest()
 
-            if recomputed_hash != ev.current_hash:
-                return False, f"Data tampering detected at event {ev.event_id} (index {idx})"
+                if recomputed_hash != ev.current_hash:
+                    return False, f"Data tampering detected at event {ev.event_id} (index {idx})"
 
-            if not self.signer.verify_signature(ev.current_hash, ev.hmac_signature):
-                return False, f"Invalid HMAC signature at event {ev.event_id} (index {idx})"
+                if not self.signer.verify_signature(ev.current_hash, ev.hmac_signature):
+                    return False, f"Invalid HMAC signature at event {ev.event_id} (index {idx})"
 
-            expected_prev = ev.current_hash
+                expected_prev = ev.current_hash
 
-        return True, None
+            return True, None
 
     def get_events(self) -> List[AuditEventSchema]:
-        return list(self._events)
+        with self._lock:
+            return list(self._events)
 
 
 # Global default audit logger
@@ -302,11 +308,11 @@ class ActionExecutor:
             return result
         except SecurityException as se:
             status = "SECURITY_BLOCKED"
-            error_msg = str(se)
+            error_msg = type(se).__name__
             raise
         except Exception as ex:
             status = "FAILED"
-            error_msg = str(ex)
+            error_msg = type(ex).__name__
             raise
         finally:
             end_time = datetime.now(timezone.utc)

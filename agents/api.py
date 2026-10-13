@@ -8,11 +8,14 @@ from __future__ import annotations
 import os
 import json
 import logging
+import hmac
+import sys
+from pathlib import Path
 from typing import Optional, Dict, Any, List
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request, Depends, status
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, Response, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -103,6 +106,30 @@ allowed_origins = os.getenv(
     "http://localhost:8000,http://localhost:3000"
 ).split(",")
 
+@app.middleware("http")
+async def require_api_key(request: Request, call_next):
+    """Protect case data; local development is allowed without a key."""
+    if request.url.path not in ("/", "/health"):
+        configured = os.getenv("PATHMIND_API_KEY", "")
+        if configured:
+            if len(configured) < 32:
+                return JSONResponse(status_code=503, content={"detail": "PATHMIND_API_KEY must contain at least 32 characters."})
+            provided = request.headers.get("X-Pathmind-API-Key", "")
+            if not hmac.compare_digest(provided, configured):
+                return JSONResponse(status_code=401, content={"detail": "Valid X-Pathmind-API-Key required."})
+        elif request.client is None or request.client.host not in ("127.0.0.1", "::1", "testclient"):
+            return JSONResponse(status_code=503, content={"detail": "Set PATHMIND_API_KEY before remote access."})
+    return await call_next(request)
+
+
+@app.get("/", include_in_schema=False)
+def dashboard():
+    """Serve the same-origin operations console with the backend."""
+    source_page = Path(__file__).resolve().parent.parent / "web" / "index.html"
+    installed_page = Path(sys.prefix) / "share" / "pathmind-atlas" / "index.html"
+    return FileResponse(source_page if source_page.is_file() else installed_page)
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[origin.strip() for origin in allowed_origins if origin.strip()],
@@ -145,6 +172,20 @@ class CaseCreateRequest(BaseModel):
 class ChatRequest(BaseModel):
     query: str
     case_id: Optional[str] = None
+
+
+def require_existing_case(case_id: str) -> None:
+    """Reject unknown case IDs before creating persisted QC/synoptic records."""
+    assert_no_phi(case_id)
+    session = get_session()
+    try:
+        found = session.query(Case.case_id).filter(
+            (Case.case_id == case_id) | (Case.accession_id_anonymized == case_id)
+        ).first()
+    finally:
+        session.close()
+    if found is None:
+        raise HTTPException(status_code=404, detail="Case not found. Register the case before analysis.")
 
 
 # ---------------------------------------------------------
@@ -325,6 +366,7 @@ def evaluate_slide_qc(metrics: WSIMetrics):
     if metrics.resolution_mpp <= 0:
         raise HTTPException(status_code=400, detail="Resolution (mpp) must be positive.")
 
+    require_existing_case(metrics.case_id)
     result = supervisor.qc_worker.evaluate_slide(metrics, persist_to_db=True)
     METRIC_QC_PROCESSED.labels(grade=result.qc_grade.value).inc()
     return result
@@ -351,6 +393,7 @@ def validate_synoptic_report(report_input: SynopticReportInput):
     if report_input.nodes_positive is not None and report_input.nodes_positive < 0:
         raise HTTPException(status_code=400, detail="Nodes positive must be non-negative.")
 
+    require_existing_case(report_input.case_id)
     result = supervisor.synoptic_worker.validate_report(report_input, persist_to_db=True)
     METRIC_SYNOPTIC_PROCESSED.labels(
         protocol=result.protocol_type.value,
@@ -364,6 +407,7 @@ def validate_synoptic_report(report_input: SynopticReportInput):
 # ---------------------------------------------------------
 @app.post("/api/cases/{case_id}/review", response_model=CaseReviewSummary, tags=["Supervisor"])
 def review_case_endpoint(case_id: str):
+    require_existing_case(case_id)
     return supervisor.review_case(case_id)
 
 
