@@ -87,3 +87,17 @@ def test_missing_breast_biomarkers_are_not_classified_valid(client):
     assert result.status_code == 200
     assert result.json()["validation_status"] == "INCOMPLETE"
     assert any("MISSING_BREAST_BIOMARKERS" in v for v in result.json()["protocol_violations"])
+
+
+def test_nonfinite_metrics_rejected_by_models():
+    from pydantic import ValidationError
+    from agents.qc_worker import WSIMetrics
+    from agents.synoptic_worker import SynopticReportInput
+
+    with pytest.raises(ValidationError):
+        WSIMetrics(case_id="CASE-DEID", laplacian_blur_var=float("nan"))
+    with pytest.raises(ValidationError):
+        SynopticReportInput(
+            case_id="CASE-DEID", primary_tumor_site="Breast",
+            histologic_type="Carcinoma", tumor_size_cm=float("inf")
+        )
