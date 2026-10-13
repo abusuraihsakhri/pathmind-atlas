@@ -1,14 +1,12 @@
-version: '3.8'
-
 services:
   pathmind-atlas:
     build: .
-    container_name: pathmind-atlas
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
-      - PATHMIND_HMAC_SECRET=${PATHMIND_HMAC_SECRET:-please-set-a-secure-32-char-min-secret-key}
-      - PATHMIND_LLM_PROVIDER=mock
+      - PATHMIND_HMAC_SECRET=${PATHMIND_HMAC_SECRET:?Set PATHMIND_HMAC_SECRET to a random secret with 32 or more characters}
+      - PATHMIND_LLM_PROVIDER=MOCK
+      - PATHMIND_API_KEY=${PATHMIND_API_KEY:?Set PATHMIND_API_KEY to a random secret with 32 or more characters}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
