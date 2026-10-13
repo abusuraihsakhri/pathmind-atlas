@@ -302,11 +302,11 @@ class ActionExecutor:
             return result
         except SecurityException as se:
             status = "SECURITY_BLOCKED"
-            error_msg = str(se)
+            error_msg = type(se).__name__
             raise
         except Exception as ex:
             status = "FAILED"
-            error_msg = str(ex)
+            error_msg = type(ex).__name__
             raise
         finally:
             end_time = datetime.now(timezone.utc)
